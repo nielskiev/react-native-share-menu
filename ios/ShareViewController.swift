@@ -7,21 +7,55 @@
 //  Created by Gustavo Parreira on 26/07/2020.
 //
 //  Modified by Veselin Stoyanov on 17/04/2021.
+//
+//  Customized by lang0909 on 02/06/2023.
 
 import Foundation
 import MobileCoreServices
 import UIKit
 import Social
 import RNShareMenu
+import UniformTypeIdentifiers
 
-class ShareViewController: SLComposeServiceViewController {
+class ShareViewController: UIViewController {
   var hostAppId: String?
   var hostAppUrlScheme: String?
   var sharedItems: [Any] = []
   
   override func viewDidLoad() {
     super.viewDidLoad()
-    
+    guard let items = extensionContext?.inputItems as? [NSExtensionItem] else {
+      cancelRequest()
+      return
+    }
+    for item in items {
+      if let itemProviders = item.attachments {
+        if(itemProviders.count > 10){
+          let sheet = UIAlertController(title: "",message: "한 번에 최대 10개까지 공유할 수 있습니다. 다시 선택해 주세요.", preferredStyle: .alert)
+          sheet.addAction(UIAlertAction(title: "확인", style: .default, handler: {
+            (a) -> Void in
+            self.cancelRequest()
+          }))
+          present(sheet, animated: true)
+          return
+        }else{
+          if itemProviders[0].hasItemConformingToTypeIdentifier(UTType.fileURL.identifier){
+          }else if itemProviders[0].hasItemConformingToTypeIdentifier(UTType.url.identifier){
+          }else if itemProviders[0].hasItemConformingToTypeIdentifier(UTType.text.identifier){
+            let shareText = items[0].attributedContentText
+            if(shareText!.length > 5000){
+              let sheet = UIAlertController(title: "",message: "한 번에 최대 5000자까지 공유할 수 있습니다. 다시 선택해주세요.", preferredStyle: .alert)
+              sheet.addAction(UIAlertAction(title: "확인", style: .default, handler: {
+                (a) -> Void in
+                self.cancelRequest()
+              }))
+              present(sheet, animated: true)
+              return
+            }
+          }
+        }
+      }
+    }
     if let hostAppId = Bundle.main.object(forInfoDictionaryKey: HOST_APP_IDENTIFIER_INFO_PLIST_KEY) as? String {
       self.hostAppId = hostAppId
     } else {
@@ -33,27 +67,8 @@ class ShareViewController: SLComposeServiceViewController {
     } else {
       print("Error: \(NO_INFO_PLIST_URL_SCHEME_ERROR)")
     }
+    handlePost(items)
   }
-
-    override func isContentValid() -> Bool {
-        // Do validation of contentText and/or NSExtensionContext attachments here
-        return true
-    }
-
-    override func didSelectPost() {
-        // This is called after the user selects Post. Do the upload of contentText and/or NSExtensionContext attachments.
-      guard let items = extensionContext?.inputItems as? [NSExtensionItem] else {
-        cancelRequest()
-        return
-      }
-
-      handlePost(items)
-    }
-
-    override func configurationItems() -> [Any]! {
-        // To add configuration options via table cells at the bottom of the sheet, return an array of SLComposeSheetConfigurationItem here.
-        return []
-    }
 
   func handlePost(_ items: [NSExtensionItem], extraData: [String:Any]? = nil) {
     DispatchQueue.global().async {
@@ -186,13 +201,25 @@ class ShareViewController: SLComposeServiceViewController {
       let fileName = UUID().uuidString
       let filePath = groupFileManagerContainer
         .appendingPathComponent("\(fileName).\(fileExtension)")
+      var checkFileSize: String? = ""
+      do{
+        let fileSize = try FileManager.default.attributesOfItem(atPath: url.path)
+        if let fileVal = fileSize[.size] as? NSNumber {
+          checkFileSize = fileVal.stringValue
+        }
+      }catch{
+      }
       
       guard self.moveFileToDisk(from: url, to: filePath) else {
         self.exit(withError: COULD_NOT_SAVE_FILE_ERROR)
         return
       }
-      
-      self.sharedItems.append([DATA_KEY: filePath.absoluteString, MIME_TYPE_KEY: mimeType])
+      self.sharedItems.append([
+        DATA_KEY: filePath.absoluteString,
+        MIME_TYPE_KEY: mimeType,
+        "fileSize": checkFileSize,
+        "fileName": url.lastPathComponent
+      ])
       semaphore.signal()
     }
   }
@@ -246,3 +273,4 @@ class ShareViewController: SLComposeServiceViewController {
   }
 
 }
+

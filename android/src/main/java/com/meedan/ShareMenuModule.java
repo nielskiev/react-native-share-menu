@@ -10,7 +10,14 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
+
+
+import android.content.ContentResolver;
+import android.database.Cursor;
+
+import android.provider.OpenableColumns;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -54,30 +61,50 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     }
 
     String action = intent.getAction();
-
-    WritableMap data = Arguments.createMap();
-    data.putString(MIME_TYPE_KEY, type);
+    WritableMap files = new WritableNativeMap();
 
     if (Intent.ACTION_SEND.equals(action)) {
       if ("text/plain".equals(type)) {
-        data.putString(DATA_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
-        return data;
+        WritableMap file = new WritableNativeMap();
+        WritableArray arr = Arguments.createArray();
+        file.putString("data", intent.getStringExtra(Intent.EXTRA_TEXT));
+        file.putString("mimeType", type);
+        arr.pushMap(file);
+        files.putArray("data",arr);
+        return files;
       }
 
       Uri fileUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
       if (fileUri != null) {
-        data.putString(DATA_KEY, fileUri.toString());
-        return data;
+        WritableMap file = new WritableNativeMap();
+        WritableArray arr = Arguments.createArray();
+        Cursor queryResult = mReactContext.getContentResolver().query(fileUri, null, null, null, null);
+        queryResult.moveToFirst();
+        file.putString("data", fileUri.toString());
+        file.putString("fileSize", queryResult.getString(queryResult.getColumnIndex(OpenableColumns.SIZE)));
+        file.putString("fileName", queryResult.getString(queryResult.getColumnIndex(OpenableColumns.DISPLAY_NAME)));
+        file.putString("mimeType", type);
+        arr.pushMap(file);
+        files.putArray("data", arr);
+        return files;
       }
     } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
       ArrayList<Uri> fileUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
       if (fileUris != null) {
-        WritableArray uriArr = Arguments.createArray();
+        int index = 0;
+        WritableArray arr = Arguments.createArray();
         for (Uri uri : fileUris) {
-          uriArr.pushString(uri.toString());
+          WritableMap file = new WritableNativeMap();
+          file.putString("data", uri.toString());
+          Cursor queryResult = mReactContext.getContentResolver().query(uri, null, null, null, null);
+          queryResult.moveToFirst();
+          file.putString("fileSize", queryResult.getString(queryResult.getColumnIndex(OpenableColumns.SIZE)));
+          file.putString("fileName", queryResult.getString(queryResult.getColumnIndex(OpenableColumns.DISPLAY_NAME)));
+          file.putString("mimeType", mReactContext.getContentResolver().getType(uri));
+          arr.pushMap(file);
         }
-        data.putArray(DATA_KEY, uriArr);
-        return data;
+        files.putArray("data", arr);
+        return files;
       }
     }
 
@@ -164,3 +191,5 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     currentActivity.setIntent(intent);
   }
 }
+
+
