@@ -1,7 +1,7 @@
 {
   "name": "@lang0909/react-native-share-menu",
   "description": "Add your app as a target for sharing from other apps and write iOS Share Extensions in React Native.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lang0909/react-native-share-menu.git"
