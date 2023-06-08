@@ -44,7 +44,7 @@ class ShareViewController: UIViewController {
           }else if itemProviders[0].hasItemConformingToTypeIdentifier(UTType.text.identifier){
             let shareText = items[0].attributedContentText
             if(shareText!.length > 5000){
-              let sheet = UIAlertController(title: "",message: "한 번에 최대 5000자까지 공유할 수 있습니다. 다시 선택해주세요.", preferredStyle: .alert)
+              let sheet = UIAlertController(title: "",message: "최대 5,000자까지 공유할 수 있습니다.", preferredStyle: .alert)
               sheet.addAction(UIAlertAction(title: "확인", style: .default, handler: {
                 (a) -> Void in
                 self.cancelRequest()
