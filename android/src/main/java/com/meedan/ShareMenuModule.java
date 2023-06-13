@@ -120,17 +120,17 @@ public class ShareMenuModule extends ReactContextBaseJavaModule implements Activ
     }
 
     // If this isn't the root activity then make sure it is
-    if (!currentActivity.isTaskRoot()) {
-      Intent newIntent = new Intent(currentActivity.getIntent());
-      newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      currentActivity.startActivity(newIntent);
+    // if (!currentActivity.isTaskRoot()) {
+    //   Intent newIntent = new Intent(currentActivity.getIntent());
+    //   newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    //   currentActivity.startActivity(newIntent);
 
-      ReadableMap shared = extractShared(newIntent);
-      successCallback.invoke(shared);
-      clearSharedText();
-      currentActivity.finish();
-      return;
-    }
+    //   ReadableMap shared = extractShared(newIntent);
+    //   successCallback.invoke(shared);
+    //   clearSharedText();
+    //   currentActivity.finish();
+    //   return;
+    // }
 
     Intent intent = currentActivity.getIntent();
     
