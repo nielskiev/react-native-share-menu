@@ -9,7 +9,7 @@ Add your app as a target for sharing from other apps and write iOS Share Extensi
 ## Installation
 
 ```bash
-npm i --save react-native-share-menu
+npm i --save @lang0909/react-native-share-menu
 ```
 
 ### Automatic Linking (React Native 0.60+)
@@ -166,6 +166,29 @@ AppRegistry.registerComponent("ShareMenuModuleComponent", () => Share);
 ```
 
 Or check the "example" directory for an example application.
+
+# @lang0909 API Docs
+
+#### Where `ShareCallback`
+
+`(share: ShareData?) => void`
+
+#### and `ShareData`
+
+# item
+
+| Result | Type  | Description      |
+| ------ | ----- | ---------------- |
+| data   | Array | Share data array |
+
+# item.data[]
+
+| Result   | Type   | Description                                                               |
+| -------- | ------ | ------------------------------------------------------------------------- |
+| data     | String | The uri of file or The value of url or text                               |
+| fileName | String | The name of file ( if mimeType.includes('text') fileName is null )        |
+| mimeType | String | The type of data                                                          |
+| fileSize | String | The size of file (byte) ( if mimeType.includes('text') fileSize is null ) |
 
 ## How it looks
 
