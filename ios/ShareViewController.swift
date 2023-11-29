@@ -175,16 +175,16 @@ class ShareViewController: UIViewController {
     }
   }
   
-  func storeFile(withProvider provider: NSItemProvider, _ semaphore: DispatchSemaphore) {
+func storeFile(withProvider provider: NSItemProvider, _ semaphore: DispatchSemaphore) {
     provider.loadItem(forTypeIdentifier: kUTTypeData as String, options: nil) { (data, error) in
       guard (error == nil) else {
         self.exit(withError: error.debugDescription)
         return
       }
-      guard let url = data as? URL else {
-        self.exit(withError: COULD_NOT_FIND_IMG_ERROR)
-        return
-      }
+      // guard let url = data as? URL else {
+      //   self.exit(withError: COULD_NOT_FIND_IMG_ERROR)
+      //   return
+      // }
       guard let hostAppId = self.hostAppId else {
         self.exit(withError: NO_INFO_PLIST_INDENTIFIER_ERROR)
         return
@@ -196,30 +196,70 @@ class ShareViewController: UIViewController {
         return
       }
       
-      let mimeType = url.extractMimeType()
-      let fileExtension = url.pathExtension
-      let fileName = UUID().uuidString
-      let filePath = groupFileManagerContainer
-        .appendingPathComponent("\(fileName).\(fileExtension)")
-      var checkFileSize: String? = ""
-      do{
-        let fileSize = try FileManager.default.attributesOfItem(atPath: url.path)
-        if let fileVal = fileSize[.size] as? NSNumber {
-          checkFileSize = fileVal.stringValue
+      if let uiImage = data as? UIImage {
+        let fileExtension = "png"
+        let date = Date()
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyyMMdd_HHmmss"
+        let dateString: String? = dateFormatter.string(for: date)
+        let fileName = "Screenshot_\(dateString ?? "")"
+        let filePath = groupFileManagerContainer
+          .appendingPathComponent("\(fileName).\(fileExtension)")
+         var checkFileSize: String? = ""
+        guard let rawData = uiImage.pngData()
+        else {
+          self.exit(withError: "Error while getting raw data")
+          return
         }
-      }catch{
-      }
-      
-      guard self.moveFileToDisk(from: url, to: filePath) else {
-        self.exit(withError: COULD_NOT_SAVE_FILE_ERROR)
+        
+        guard FileManager.default.createFile(atPath: filePath.path, contents: rawData)
+        else {
+          self.exit(withError: "Error while createFile")
+          return
+        }
+        do{
+          let fileSize = try FileManager.default.attributesOfItem(atPath: filePath.path)
+          if let fileVal = fileSize[.size] as? NSNumber {
+            checkFileSize = fileVal.stringValue
+          }
+        }catch{
+        }
+        self.sharedItems.append([
+          DATA_KEY: filePath.absoluteString, 
+          MIME_TYPE_KEY: "image/png",
+          "fileName": filePath.lastPathComponent,
+          "fileSize": checkFileSize
+        ])
+      } else if let url = data as? URL {
+        let mimeType = url.extractMimeType()
+        let fileExtension = url.pathExtension
+        let fileName = UUID().uuidString
+        let filePath = groupFileManagerContainer
+          .appendingPathComponent("\(fileName).\(fileExtension)")
+        var checkFileSize: String? = ""
+        do{
+          let fileSize = try FileManager.default.attributesOfItem(atPath: url.path)
+          if let fileVal = fileSize[.size] as? NSNumber {
+            checkFileSize = fileVal.stringValue
+          }
+        }catch{
+        }
+        
+        guard self.moveFileToDisk(from: url, to: filePath) else {
+          self.exit(withError: COULD_NOT_SAVE_FILE_ERROR)
+          return
+        }
+
+        self.sharedItems.append([
+          DATA_KEY: filePath.absoluteString,
+          MIME_TYPE_KEY: mimeType,
+          "fileSize": checkFileSize,
+          "fileName": url.lastPathComponent
+        ])
+      } else {
+        self.exit(withError: COULD_NOT_FIND_IMG_ERROR)
         return
       }
-      self.sharedItems.append([
-        DATA_KEY: filePath.absoluteString,
-        MIME_TYPE_KEY: mimeType,
-        "fileSize": checkFileSize,
-        "fileName": url.lastPathComponent
-      ])
       semaphore.signal()
     }
   }
