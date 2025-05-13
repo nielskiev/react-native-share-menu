@@ -10,17 +10,17 @@ Pod::Spec.new do |s|
   s.license      = package["license"]
   s.authors      = package["author"]
 
-  s.platforms    = { :ios => "9.0" }
-  s.source       = { :git => "https://github.com/meedan/react-native-share-menu.git", :tag => "#{s.version}" }
+  s.platforms    = { :ios => "12.0" }
+  s.source       = { :git => "https://github.com/nielskiev/react-native-share-menu.git", :tag  => "#{s.version}" }
   s.swift_version = "5.2"
 
 
+#   s.source_files = "ios/**/*.{h,m,mm,swift}"
+#   s.exclude_files = [
+#     "ios/ShareViewController.swift",
+#     "ios/ReactShareViewController.swift"
+#   ]
+
   s.source_files = "ios/**/*.{h,m,mm,swift}"
-  s.exclude_files = [
-    "ios/ShareViewController.swift",
-    "ios/ReactShareViewController.swift"
-  ]
-
-
-  s.dependency "React"
+  s.dependency "React-Core"
 end
