@@ -11,7 +11,11 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => "12.0" }
-  s.source       = { :git => "https://github.com/nielskiev/react-native-share-menu.git", :tag  => "#{s.version}" }
+#   s.source       = { :git => "https://github.com/nielskiev/react-native-share-menu.git", :tag  => "#{s.version}" }
+  s.source = {
+    :git    => "https://github.com/nielskiev/react-native-share-menu.git",
+    :branch => "master"
+  }
   s.swift_version = "5.2"
 
 
