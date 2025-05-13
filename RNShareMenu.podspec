@@ -25,14 +25,10 @@ Pod::Spec.new do |s|
   ]
 
   s.source_files = "ios/**/*.{h,m,mm,swift}"
-#   s.dependency "React"
+  s.dependency "React"
 
-  s.dependency 'React-Core'
-  s.dependency 'React-RCTBridge'
-  s.dependency 'React-RCTEventEmitter'
-  s.dependency 'React-RCTLinking'
-
-#   s.dependency "React-Core"
-#   s.dependency "React-RCTBridge"
-#   s.dependency "React-RCTEventEmitter"
+#   s.dependency 'React-Core'
+#   s.dependency 'React-RCTBridge'
+#   s.dependency 'React-RCTEventEmitter'
+#   s.dependency 'React-RCTLinking'
 end
