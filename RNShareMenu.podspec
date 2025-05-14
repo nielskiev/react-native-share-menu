@@ -20,7 +20,7 @@ Pod::Spec.new do |s|
 
 
   s.exclude_files = [
-#     "ios/ShareViewController.swift",
+    "ios/ShareViewController.swift",
     "ios/ReactShareViewController.swift"
   ]
 
