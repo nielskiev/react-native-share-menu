@@ -93,6 +93,8 @@ class ShareViewController: SLComposeServiceViewController {
   }
 
   private func storeText(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
+    print("Store Text")
+
     provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { data, _ in
       defer { sem.signal() }
       if let txt = data as? String {
@@ -102,6 +104,8 @@ class ShareViewController: SLComposeServiceViewController {
   }
 
   private func storeUrl(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
+    print("Store URL")
+
     provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { data, _ in
       defer { sem.signal() }
       if let url = data as? URL {
@@ -111,6 +115,8 @@ class ShareViewController: SLComposeServiceViewController {
   }
 
   private func storeFile(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
+    print("Store File")
+
     provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
       defer { sem.signal() }
       guard let url = data as? URL,
@@ -120,6 +126,8 @@ class ShareViewController: SLComposeServiceViewController {
       else { return }
 
       let filename = UUID().uuidString + "." + url.pathExtension
+      print("Filename: " + filename);
+
       let dest = container.appendingPathComponent(filename)
       try? FileManager.default.removeItem(at: dest)
       do {
