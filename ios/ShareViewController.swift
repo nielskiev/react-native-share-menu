@@ -163,7 +163,7 @@ class ShareViewController: SLComposeServiceViewController {
     try? FileManager.default.removeItem(at: dest)
     do {
       try FileManager.default.copyItem(at: src, to: dest)
-      let mime = src.pathExtension.extractMimeType()
+      let mime = src.extractMimeType()
       self.sharedItems.append([
         DATA_KEY: dest.absoluteString,
         MIME_TYPE_KEY: mime,
