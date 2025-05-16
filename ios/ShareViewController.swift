@@ -75,13 +75,13 @@ class ShareViewController: SLComposeServiceViewController {
         }
         for provider in providers {
           if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-            storeText(provider, sem)
+            self.storeText(provider, sem)
           }
           else if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            storeFile(provider, sem)
+            self.storeFile(provider, sem)
           }
           else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-            storeUrl(provider, sem)
+            self.storeUrl(provider, sem)
           }
           else {
             // maybe handle other UTTypes...
