@@ -109,13 +109,45 @@ class ShareViewController: SLComposeServiceViewController {
     }
   }
 
-  private func storeUrl(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
-    print("Store URL")
+  private func storeFile(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
+    print("Store File")
 
-    provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { data, _ in
+    provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, error in
       defer { sem.signal() }
-      if let url = data as? URL {
-        self.sharedItems.append([DATA_KEY: url.absoluteString, MIME_TYPE_KEY: "text/plain"])
+      guard error == nil,
+            let incomingURL = data as? URL,
+            let hostId = self.hostAppId,
+            let container = FileManager.default
+              .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)")
+      else {
+        print("❌ storeFile: invalid input or missing container")
+        return
+      }
+
+      // 1️⃣ Start security‐scoped access
+      let didStart = incomingURL.startAccessingSecurityScopedResource()
+
+      // 2️⃣ Build destination inside App Group
+      let filename = UUID().uuidString + "." + incomingURL.pathExtension
+      let destURL = container.appendingPathComponent(filename)
+      try? FileManager.default.removeItem(at: destURL)
+
+      // 3️⃣ Copy the file
+      do {
+        try FileManager.default.copyItem(at: incomingURL, to: destURL)
+        let mime = destURL.extractMimeType()
+        self.sharedItems.append([
+          DATA_KEY: destURL.absoluteString,
+          MIME_TYPE_KEY: mime,
+          "fileName": incomingURL.lastPathComponent
+        ])
+      } catch {
+        print("❌ storeFile: copy failed:", error)
+      }
+
+      // 4️⃣ Stop access
+      if didStart {
+        incomingURL.stopAccessingSecurityScopedResource()
       }
     }
   }
@@ -123,40 +155,52 @@ class ShareViewController: SLComposeServiceViewController {
   private func storeUrl(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
     print("Store URL")
 
-    provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { data, _ in
+    provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { data, error in
       defer { sem.signal() }
-      guard let url = data as? URL else { return }
+      guard error == nil,
+            let url = data as? URL
+      else {
+        print("❌ storeUrl: invalid input")
+        return
+      }
 
-      // if it's really a file on disk, do the same security-scoped copy:
       if url.isFileURL {
+        // Handle as file URL just like storeFile, but coordinate first:
         let didStart = url.startAccessingSecurityScopedResource()
-        defer { if didStart { url.stopAccessingSecurityScopedResource() } }
-
-        // (optional) coordinate for safe reading & iCloud download:
         var coordError: NSError?
+
         NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordError) { coordURL in
-          guard let hostId = self.hostAppId,
+          guard coordError == nil,
+                let hostId = self.hostAppId,
                 let container = FileManager.default
-                  .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)") else { return }
+                  .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)")
+          else {
+            print("❌ storeUrl: coordination failed", coordError ?? "")
+            return
+          }
 
           let filename = UUID().uuidString + "." + coordURL.pathExtension
-          let dest = container.appendingPathComponent(filename)
-          try? FileManager.default.removeItem(at: dest)
+          let destURL = container.appendingPathComponent(filename)
+          try? FileManager.default.removeItem(at: destURL)
 
           do {
-            try FileManager.default.copyItem(at: coordURL, to: dest)
-            let mime = coordURL.extractMimeType()
+            try FileManager.default.copyItem(at: coordURL, to: destURL)
+            let mime = destURL.extractMimeType()
             self.sharedItems.append([
-              DATA_KEY: dest.absoluteString,
+              DATA_KEY: destURL.absoluteString,
               MIME_TYPE_KEY: mime,
               "fileName": coordURL.lastPathComponent
             ])
           } catch {
-            print("Copy failed:", error)
+            print("❌ storeUrl: copy failed", error)
           }
         }
+
+        if didStart {
+          url.stopAccessingSecurityScopedResource()
+        }
       } else {
-        // it really was a web link or plain URL — just pass it through
+        // Not a local file, just pass through the URL string
         self.sharedItems.append([
           DATA_KEY: url.absoluteString,
           MIME_TYPE_KEY: "text/plain"
