@@ -125,12 +125,15 @@ class ShareViewController: SLComposeServiceViewController {
               .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)")
       else { return }
 
-      let filename = UUID().uuidString + "." + url.pathExtension
-      print("Filename: " + filename);
+      // 1️⃣ Ask for temporary access
+      let didStart = url.startAccessingSecurityScopedResource()
 
+      let filename = UUID().uuidString + "." + url.pathExtension
       let dest = container.appendingPathComponent(filename)
       try? FileManager.default.removeItem(at: dest)
+
       do {
+        // 2️⃣ Copy the file while access is granted
         try FileManager.default.copyItem(at: url, to: dest)
         let mime = url.extractMimeType()
         self.sharedItems.append([
@@ -140,6 +143,11 @@ class ShareViewController: SLComposeServiceViewController {
         ])
       } catch {
         print("Copy failed:", error)
+      }
+
+      // 3️⃣ Always balance your call
+      if didStart {
+        url.stopAccessingSecurityScopedResource()
       }
     }
   }
