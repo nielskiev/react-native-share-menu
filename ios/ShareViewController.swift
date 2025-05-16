@@ -75,11 +75,17 @@ class ShareViewController: SLComposeServiceViewController {
         }
         for provider in providers {
           if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-            self.storeText(provider, sem)
-          } else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-            self.storeUrl(provider, sem)
-          } else {
-            self.storeFile(provider, sem)
+            storeText(provider, sem)
+          }
+          else if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            storeFile(provider, sem)
+          }
+          else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+            storeUrl(provider, sem)
+          }
+          else {
+            // maybe handle other UTTypes...
+            sem.signal()
           }
           sem.wait()
         }
@@ -114,40 +120,47 @@ class ShareViewController: SLComposeServiceViewController {
     }
   }
 
-  private func storeFile(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
-    print("Store File")
+  private func storeUrl(_ provider: NSItemProvider, _ sem: DispatchSemaphore) {
+    print("Store URL")
 
-    provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { data, _ in
+    provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { data, _ in
       defer { sem.signal() }
-      guard let url = data as? URL,
-            let hostId = self.hostAppId,
-            let container = FileManager.default
-              .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)")
-      else { return }
+      guard let url = data as? URL else { return }
 
-      // 1️⃣ Ask for temporary access
-      let didStart = url.startAccessingSecurityScopedResource()
+      // if it's really a file on disk, do the same security-scoped copy:
+      if url.isFileURL {
+        let didStart = url.startAccessingSecurityScopedResource()
+        defer { if didStart { url.stopAccessingSecurityScopedResource() } }
 
-      let filename = UUID().uuidString + "." + url.pathExtension
-      let dest = container.appendingPathComponent(filename)
-      try? FileManager.default.removeItem(at: dest)
+        // (optional) coordinate for safe reading & iCloud download:
+        var coordError: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordError) { coordURL in
+          guard let hostId = self.hostAppId,
+                let container = FileManager.default
+                  .containerURL(forSecurityApplicationGroupIdentifier: "group.\(hostId)") else { return }
 
-      do {
-        // 2️⃣ Copy the file while access is granted
-        try FileManager.default.copyItem(at: url, to: dest)
-        let mime = url.extractMimeType()
+          let filename = UUID().uuidString + "." + coordURL.pathExtension
+          let dest = container.appendingPathComponent(filename)
+          try? FileManager.default.removeItem(at: dest)
+
+          do {
+            try FileManager.default.copyItem(at: coordURL, to: dest)
+            let mime = coordURL.extractMimeType()
+            self.sharedItems.append([
+              DATA_KEY: dest.absoluteString,
+              MIME_TYPE_KEY: mime,
+              "fileName": coordURL.lastPathComponent
+            ])
+          } catch {
+            print("Copy failed:", error)
+          }
+        }
+      } else {
+        // it really was a web link or plain URL — just pass it through
         self.sharedItems.append([
-          DATA_KEY: dest.absoluteString,
-          MIME_TYPE_KEY: mime,
-          "fileName": url.lastPathComponent
+          DATA_KEY: url.absoluteString,
+          MIME_TYPE_KEY: "text/plain"
         ])
-      } catch {
-        print("Copy failed:", error)
-      }
-
-      // 3️⃣ Always balance your call
-      if didStart {
-        url.stopAccessingSecurityScopedResource()
       }
     }
   }
